@@ -80,8 +80,8 @@ def performance_metrics(returns: pd.Series, annual_risk_free_rate: float = 0.03)
     clean = returns.dropna().astype(float)
     if len(clean) < 2:
         raise ValueError("At least two return observations are required.")
-    if annual_risk_free_rate <= -1:
-        raise ValueError("Annual risk-free rate must be greater than -100%.")
+    if not np.isfinite(float(annual_risk_free_rate)) or annual_risk_free_rate <= -1:
+        raise ValueError("Annual risk-free rate must be finite and greater than -100%.")
     periods_per_year = 12
     total_growth = float((1 + clean).prod())
     annualized_return = total_growth ** (periods_per_year / len(clean)) - 1
