@@ -107,3 +107,9 @@ def test_metrics_return_expected_keys():
 def test_metrics_reject_single_observation():
     with pytest.raises(ValueError):
         performance_metrics(pd.Series([0.01]))
+
+@pytest.mark.parametrize("risk_free_rate", [float("nan"), float("inf"), float("-inf"), -1.0])
+def test_metrics_reject_invalid_annual_risk_free_rate(risk_free_rate):
+    with pytest.raises(ValueError, match="Annual risk-free rate"):
+        performance_metrics(pd.Series([0.01, -0.02, 0.015, 0.0]), risk_free_rate)
+
