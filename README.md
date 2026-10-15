@@ -32,7 +32,7 @@ Activate the environment:
 
 **Windows**
 ```powershell
-.venv\Scripts\Activate.ps1
+.venv\\Scripts\\Activate.ps1
 ```
 
 **macOS / Linux**
@@ -57,6 +57,8 @@ streamlit run app.py
 - **Maximum drawdown:** largest peak-to-trough decline in the illustrative wealth index.
 - **Sharpe-style ratio:** annualized mean excess monthly return divided by monthly volatility, using the risk-free rate entered in the app.
 - **Stress test:** weighted sum of the selected asset-class shocks for one hypothetical period.
+
+For practical guidance on interpreting these outputs and their limitations, see the [Portfolio Metrics Interpretation Guide](docs/PORTFOLIO_METRICS_GUIDE.md).
 
 ## Limitations and responsible use
 
