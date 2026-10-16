@@ -40,6 +40,17 @@ def validate_weights(weights: dict[str, float], tolerance: float = 1e-6) -> None
         raise ValueError("Portfolio weights must sum to 100%.")
 
 
+def _validate_periodic_returns(returns: pd.Series | pd.DataFrame) -> pd.Series | pd.DataFrame:
+    """Reject invalid simple returns before they can distort portfolio metrics."""
+    numeric = returns.astype(float)
+    values = numeric.to_numpy(dtype=float)
+    if not np.isfinite(values).all():
+        raise ValueError("Periodic returns must be finite; resolve missing or infinite observations first.")
+    if (values <= -1).any():
+        raise ValueError("Periodic returns must be greater than -100%.")
+    return numeric
+
+
 def synthetic_monthly_returns(months: int = 60, seed: int = 2026) -> pd.DataFrame:
     """Return deterministic illustrative monthly returns; not real market history."""
     if months < 2:
@@ -63,13 +74,19 @@ def portfolio_returns(asset_returns: pd.DataFrame, weights: dict[str, float]) ->
     missing = set(ASSET_CLASSES) - set(asset_returns.columns)
     if missing:
         raise ValueError(f"Missing asset return columns: {', '.join(sorted(missing))}")
-    w = pd.Series(weights, dtype=float).reindex(asset_returns.columns)
-    return asset_returns[ASSET_CLASSES].mul(w, axis=1).sum(axis=1).rename("Portfolio return")
+    # pandas.DataFrame.sum skips NaNs by default; reject incomplete rows rather than
+    # silently treating missing asset returns as if they had zero contribution.
+    clean_asset_returns = _validate_periodic_returns(asset_returns[ASSET_CLASSES])
+    w = pd.Series(weights, dtype=float).reindex(clean_asset_returns.columns)
+    return clean_asset_returns.mul(w, axis=1).sum(axis=1).rename("Portfolio return")
 
 
 def max_drawdown(returns: pd.Series) -> float:
     """Maximum peak-to-trough drawdown of a return series, returned as a negative fraction."""
-    wealth = (1.0 + returns.fillna(0)).cumprod()
+    clean = _validate_periodic_returns(returns.fillna(0))
+    if clean.empty:
+        raise ValueError("At least one return observation is required.")
+    wealth = (1.0 + clean).cumprod()
     peaks = wealth.cummax()
     drawdowns = wealth / peaks - 1.0
     return float(drawdowns.min())
@@ -77,7 +94,7 @@ def max_drawdown(returns: pd.Series) -> float:
 
 def performance_metrics(returns: pd.Series, annual_risk_free_rate: float = 0.03) -> dict[str, float]:
     """Compute historical-style summary metrics from a periodic return series."""
-    clean = returns.dropna().astype(float)
+    clean = _validate_periodic_returns(returns.dropna())
     if len(clean) < 2:
         raise ValueError("At least two return observations are required.")
     if not np.isfinite(float(annual_risk_free_rate)) or annual_risk_free_rate <= -1:
