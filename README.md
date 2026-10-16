@@ -73,8 +73,3 @@ This is an educational coding project, **not an investment tool**. It uses no li
 ## Disclaimer
 
 All allocations, returns, and scenarios are hypothetical. This project is for education and demonstration only and does not constitute financial, legal, or tax advice.
-
-
-## Additional dashboard: Client Portfolio Intelligence
-
-A separate client-focused Streamlit dashboard is available in [`client_portfolio_intelligence/`](client_portfolio_intelligence/). It adds fictional client profiles, benchmark comparisons, allocation/rebalancing analysis, asset-level risk and correlations, stress scenarios, client review exports, and CSV uploads. See the [subproject README](client_portfolio_intelligence/README.md) for setup instructions. All default prices and client profiles are synthetic and for educational demonstration only.
