@@ -58,7 +58,7 @@ streamlit run app.py
 - **Sharpe-style ratio:** annualized mean excess monthly return divided by monthly volatility, using the risk-free rate entered in the app.
 - **Stress test:** weighted sum of the selected asset-class shocks for one hypothetical period.
 
-For practical guidance on interpreting these outputs and their limitations, see the [Portfolio Metrics Interpretation Guide](docs/PORTFOLIO_METRICS_GUIDE.md).
+For practical guidance on interpreting these outputs and their limitations, see the [Portfolio Metrics Interpretation Guide](docs/PORTFOLIO_METRICS_GUIDE.md). For a repeatable walkthrough of hypothetical shocks and a scenario interpretation checklist, see the [Stress Scenario Playbook](docs/STRESS_SCENARIO_PLAYBOOK.md).
 
 ## Limitations and responsible use
 
