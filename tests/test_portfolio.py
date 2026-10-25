@@ -113,3 +113,25 @@ def test_metrics_reject_invalid_annual_risk_free_rate(risk_free_rate):
     with pytest.raises(ValueError, match="Annual risk-free rate"):
         performance_metrics(pd.Series([0.01, -0.02, 0.015, 0.0]), risk_free_rate)
 
+
+@pytest.mark.parametrize("bad_returns", [
+    [0.01, float("nan"), 0.02],
+    [0.01, float("inf"), 0.02],
+])
+def test_max_drawdown_rejects_missing_or_non_finite_returns(bad_returns):
+    with pytest.raises(ValueError, match="Periodic returns must be finite"):
+        max_drawdown(pd.Series(bad_returns))
+
+
+@pytest.mark.parametrize("bad_returns", [
+    [0.01, float("nan"), 0.02],
+    [0.01, float("inf"), 0.02],
+])
+def test_metrics_reject_missing_or_non_finite_returns(bad_returns):
+    with pytest.raises(ValueError, match="Periodic returns must be finite"):
+        performance_metrics(pd.Series(bad_returns))
+
+
+def test_metrics_compound_cumulative_return():
+    metrics = performance_metrics(pd.Series([0.10, 0.10]), annual_risk_free_rate=0.0)
+    assert metrics["Cumulative return"] == pytest.approx(0.21)

@@ -11,8 +11,7 @@ A simple return of -100% means the asset value has fallen to zero. Returns below
 - Portfolio-return aggregation requires every expected asset-class observation to be present and finite.
 - Asset-class returns at or below -100% are rejected before weighted aggregation.
 - Performance metrics reject non-finite periodic returns and returns at or below -100%.
-- The standalone maximum-drawdown calculation applies the same finite-return and lower-bound checks. Missing values in that function retain the existing behavior of being treated as zero returns.
-- The performance-metrics function continues to omit missing observations before calculating its summary statistics.
+- The standalone maximum-drawdown and performance-metrics calculations reject missing observations rather than silently filling them with zero or dropping them. Resolve incomplete data explicitly before calculating metrics.
 
 ## Quick verification
 
