@@ -83,7 +83,7 @@ def portfolio_returns(asset_returns: pd.DataFrame, weights: dict[str, float]) ->
 
 def max_drawdown(returns: pd.Series) -> float:
     """Maximum peak-to-trough drawdown of a return series, returned as a negative fraction."""
-    clean = _validate_periodic_returns(returns.fillna(0))
+    clean = _validate_periodic_returns(returns)
     if clean.empty:
         raise ValueError("At least one return observation is required.")
     wealth = (1.0 + clean).cumprod()
@@ -94,7 +94,7 @@ def max_drawdown(returns: pd.Series) -> float:
 
 def performance_metrics(returns: pd.Series, annual_risk_free_rate: float = 0.03) -> dict[str, float]:
     """Compute historical-style summary metrics from a periodic return series."""
-    clean = _validate_periodic_returns(returns.dropna())
+    clean = _validate_periodic_returns(returns)
     if len(clean) < 2:
         raise ValueError("At least two return observations are required.")
     if not np.isfinite(float(annual_risk_free_rate)) or annual_risk_free_rate <= -1:
