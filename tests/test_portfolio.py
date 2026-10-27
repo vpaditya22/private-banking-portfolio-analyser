@@ -7,6 +7,7 @@ from src.portfolio import (
     max_drawdown,
     performance_metrics,
     portfolio_returns,
+    portfolio_contributions,
     synthetic_monthly_returns,
     validate_weights,
 )
@@ -135,3 +136,21 @@ def test_metrics_reject_missing_or_non_finite_returns(bad_returns):
 def test_metrics_compound_cumulative_return():
     metrics = performance_metrics(pd.Series([0.10, 0.10]), annual_risk_free_rate=0.0)
     assert metrics["Cumulative return"] == pytest.approx(0.21)
+
+
+def test_portfolio_contributions_sum_to_portfolio_returns():
+    df = pd.DataFrame({
+        "Global equities": [0.10, -0.02],
+        "High-quality bonds": [0.02, 0.01],
+        "Gold": [0.04, 0.03],
+        "Cash": [0.001, 0.001],
+    })
+    contributions = portfolio_contributions(df, VALID)
+    expected = portfolio_returns(df, VALID)
+    pd.testing.assert_series_equal(contributions.sum(axis=1).rename("Portfolio return"), expected)
+
+
+def test_portfolio_contributions_reject_missing_asset_column():
+    df = pd.DataFrame({"Global equities": [0.01]})
+    with pytest.raises(ValueError, match="Missing asset return columns"):
+        portfolio_contributions(df, VALID)
