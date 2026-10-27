@@ -154,3 +154,19 @@ def test_portfolio_contributions_reject_missing_asset_column():
     df = pd.DataFrame({"Global equities": [0.01]})
     with pytest.raises(ValueError, match="Missing asset return columns"):
         portfolio_contributions(df, VALID)
+
+def test_portfolio_contributions_preserve_period_index_and_asset_order():
+    index = pd.to_datetime(["2025-01-31", "2025-02-28"])
+    df = pd.DataFrame({a: [0.01, 0.02] for a in ASSET_CLASSES}, index=index)
+    contributions = portfolio_contributions(df, VALID)
+    assert contributions.index.equals(index)
+    assert list(contributions.columns) == ASSET_CLASSES
+
+
+@pytest.mark.parametrize("bad_value", [float("nan"), float("inf"), float("-inf")])
+def test_portfolio_contributions_reject_non_finite_returns(bad_value):
+    df = pd.DataFrame({a: [0.01, 0.02] for a in ASSET_CLASSES})
+    df.loc[1, "Gold"] = bad_value
+    with pytest.raises(ValueError, match="Periodic returns must be finite"):
+        portfolio_contributions(df, VALID)
+
