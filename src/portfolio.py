@@ -127,3 +127,19 @@ def apply_one_period_shock(weights: dict[str, float], shocks: dict[str, float]) 
 
 def allocation_summary(weights: dict[str, float], asset_returns: pd.DataFrame, annual_rf: float = 0.03) -> dict[str, float]:
     return performance_metrics(portfolio_returns(asset_returns, weights), annual_rf)
+
+def portfolio_contributions(asset_returns: pd.DataFrame, weights: dict[str, float]) -> pd.DataFrame:
+    """Return each asset class's weighted periodic contribution to portfolio return.
+
+    The contribution columns sum to the portfolio return for each period. Values
+    are decimal returns (for example, 0.01 means one percentage point).
+    """
+    validate_weights(weights)
+    missing = set(ASSET_CLASSES) - set(asset_returns.columns)
+    if missing:
+        raise ValueError(f"Missing asset return columns: {', '.join(sorted(missing))}")
+    clean_asset_returns = _validate_periodic_returns(asset_returns[ASSET_CLASSES])
+    weight_series = pd.Series(weights, dtype=float).reindex(ASSET_CLASSES)
+    contributions = clean_asset_returns.mul(weight_series, axis=1)
+    contributions.columns.name = "Asset class"
+    return contributions
