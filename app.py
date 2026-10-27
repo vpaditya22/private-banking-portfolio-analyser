@@ -14,6 +14,7 @@ from src.portfolio import (
     apply_one_period_shock,
     performance_metrics,
     portfolio_returns,
+    portfolio_contributions,
     synthetic_monthly_returns,
 )
 
@@ -58,6 +59,49 @@ with right:
     wealth = (1 + port_returns).cumprod() * starting_value
     wealth_df = pd.DataFrame({"Illustrative portfolio value": wealth})
     st.plotly_chart(px.line(wealth_df, title="Illustrative portfolio path", labels={"index": "Month", "value": "Portfolio value ($)"}), use_container_width=True)
+
+
+st.subheader("Asset-level return contribution")
+st.caption(
+    "Each contribution is the asset-class return multiplied by its portfolio weight. "
+    "Contributions add up to the portfolio return within each synthetic month. "
+    "Average monthly contributions are arithmetic averages, not compounded returns."
+)
+monthly_contributions = portfolio_contributions(returns, weights)
+average_contribution = monthly_contributions.mean().reindex(ASSET_CLASSES)
+last_period_contribution = monthly_contributions.iloc[-1].reindex(ASSET_CLASSES)
+contribution_summary = pd.DataFrame({
+    "Asset class": ASSET_CLASSES,
+    "Average monthly contribution": [average_contribution[a] for a in ASSET_CLASSES],
+    "Last synthetic month contribution": [last_period_contribution[a] for a in ASSET_CLASSES],
+})
+contribution_left, contribution_right = st.columns([3, 2])
+with contribution_left:
+    st.plotly_chart(
+        px.bar(
+            contribution_summary,
+            x="Asset class",
+            y="Average monthly contribution",
+            title="Average monthly contribution by asset class",
+            labels={"Average monthly contribution": "Contribution (monthly return)"},
+        ),
+        use_container_width=True,
+    )
+with contribution_right:
+    st.dataframe(
+        contribution_summary.style.format({
+            "Average monthly contribution": "{:.3%}",
+            "Last synthetic month contribution": "{:.3%}",
+        }),
+        use_container_width=True,
+        hide_index=True,
+    )
+st.download_button(
+    "Download monthly contribution CSV",
+    monthly_contributions.to_csv(index=True, index_label="Synthetic month").encode("utf-8"),
+    "monthly_asset_contributions.csv",
+    "text/csv",
+)
 
 st.subheader("Allocation comparison")
 comparison = []
