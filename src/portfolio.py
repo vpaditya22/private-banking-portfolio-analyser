@@ -82,12 +82,14 @@ def portfolio_returns(asset_returns: pd.DataFrame, weights: dict[str, float]) ->
 
 
 def max_drawdown(returns: pd.Series) -> float:
-    """Maximum peak-to-trough drawdown of a return series, returned as a negative fraction."""
+    """Maximum peak-to-trough drawdown, including losses from initial capital."""
     clean = _validate_periodic_returns(returns)
     if clean.empty:
         raise ValueError("At least one return observation is required.")
     wealth = (1.0 + clean).cumprod()
-    peaks = wealth.cummax()
+    # Initial portfolio value is 1.0 and must remain part of the high-water mark.
+    # Without this floor, a loss in the first period would incorrectly show 0% drawdown.
+    peaks = wealth.cummax().clip(lower=1.0)
     drawdowns = wealth / peaks - 1.0
     return float(drawdowns.min())
 
