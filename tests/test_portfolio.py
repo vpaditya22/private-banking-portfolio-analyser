@@ -81,6 +81,19 @@ def test_max_drawdown_negative_after_loss():
     assert max_drawdown(returns) < 0
 
 
+@pytest.mark.parametrize(
+    ("periodic_returns", "expected"),
+    [
+        ([-0.10, 0.05], -0.10),
+        ([-0.10, 0.20], -0.10),
+        ([0.10, -0.20], -0.20),
+        ([0.05, 0.03], 0.0),
+    ],
+)
+def test_max_drawdown_uses_initial_capital_as_high_water_mark(periodic_returns, expected):
+    assert max_drawdown(pd.Series(periodic_returns)) == pytest.approx(expected)
+
+
 def test_stress_shock_weighted_sum():
     shocks = {a: 0.0 for a in ASSET_CLASSES}
     shocks["Global equities"] = -0.20
@@ -108,6 +121,7 @@ def test_metrics_return_expected_keys():
 def test_metrics_reject_single_observation():
     with pytest.raises(ValueError):
         performance_metrics(pd.Series([0.01]))
+
 
 @pytest.mark.parametrize("risk_free_rate", [float("nan"), float("inf"), float("-inf"), -1.0])
 def test_metrics_reject_invalid_annual_risk_free_rate(risk_free_rate):
@@ -155,6 +169,7 @@ def test_portfolio_contributions_reject_missing_asset_column():
     with pytest.raises(ValueError, match="Missing asset return columns"):
         portfolio_contributions(df, VALID)
 
+
 def test_portfolio_contributions_preserve_period_index_and_asset_order():
     index = pd.to_datetime(["2025-01-31", "2025-02-28"])
     df = pd.DataFrame({a: [0.01, 0.02] for a in ASSET_CLASSES}, index=index)
@@ -169,4 +184,3 @@ def test_portfolio_contributions_reject_non_finite_returns(bad_value):
     df.loc[1, "Gold"] = bad_value
     with pytest.raises(ValueError, match="Periodic returns must be finite"):
         portfolio_contributions(df, VALID)
-
