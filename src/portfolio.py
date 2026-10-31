@@ -145,3 +145,29 @@ def portfolio_contributions(asset_returns: pd.DataFrame, weights: dict[str, floa
     contributions = clean_asset_returns.mul(weight_series, axis=1)
     contributions.columns.name = "Asset class"
     return contributions
+
+def portfolio_wealth_path(returns: pd.Series, starting_value: float = 1.0) -> pd.Series:
+    """Return starting capital followed by each period's compounded portfolio value.
+
+    The first element is the initial value before any return is applied. Subsequent
+    elements are end-of-period values, so the output always has one more point than
+    the input return series.
+    """
+    clean = _validate_periodic_returns(returns)
+    if clean.empty:
+        raise ValueError("At least one return observation is required.")
+
+    try:
+        initial_value = float(starting_value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Starting portfolio value must be finite and greater than zero.") from exc
+    if not np.isfinite(initial_value) or initial_value <= 0:
+        raise ValueError("Starting portfolio value must be finite and greater than zero.")
+
+    period_growth = (1.0 + clean).cumprod().to_numpy(dtype=float)
+    values = initial_value * np.concatenate(([1.0], period_growth))
+    return pd.Series(
+        values,
+        index=pd.RangeIndex(len(values), name="Period"),
+        name="Portfolio value",
+    )

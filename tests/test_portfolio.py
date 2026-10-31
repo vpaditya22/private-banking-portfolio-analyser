@@ -8,6 +8,7 @@ from src.portfolio import (
     performance_metrics,
     portfolio_returns,
     portfolio_contributions,
+    portfolio_wealth_path,
     synthetic_monthly_returns,
     validate_weights,
 )
@@ -184,3 +185,33 @@ def test_portfolio_contributions_reject_non_finite_returns(bad_value):
     df.loc[1, "Gold"] = bad_value
     with pytest.raises(ValueError, match="Periodic returns must be finite"):
         portfolio_contributions(df, VALID)
+
+
+
+def test_portfolio_wealth_path_includes_starting_capital_and_compounds_returns():
+    returns = pd.Series(
+        [0.10, -0.20],
+        index=pd.to_datetime(["2025-01-31", "2025-02-28"]),
+    )
+    path = portfolio_wealth_path(returns, starting_value=1000)
+
+    assert list(path) == pytest.approx([1000, 1100, 880])
+    assert path.index.equals(pd.RangeIndex(3, name="Period"))
+    assert path.name == "Portfolio value"
+
+
+def test_portfolio_wealth_path_rejects_empty_returns():
+    with pytest.raises(ValueError, match="At least one return observation"):
+        portfolio_wealth_path(pd.Series(dtype=float))
+
+
+@pytest.mark.parametrize("starting_value", [0, -100, float("nan"), float("inf"), float("-inf")])
+def test_portfolio_wealth_path_rejects_invalid_starting_value(starting_value):
+    with pytest.raises(ValueError, match="Starting portfolio value"):
+        portfolio_wealth_path(pd.Series([0.01, 0.02]), starting_value)
+
+
+@pytest.mark.parametrize("bad_return", [float("nan"), float("inf"), -1.0])
+def test_portfolio_wealth_path_rejects_invalid_returns(bad_return):
+    with pytest.raises(ValueError):
+        portfolio_wealth_path(pd.Series([0.01, bad_return]))
