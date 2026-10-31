@@ -15,6 +15,7 @@ from src.portfolio import (
     performance_metrics,
     portfolio_returns,
     portfolio_contributions,
+    portfolio_wealth_path,
     synthetic_monthly_returns,
 )
 
@@ -56,9 +57,24 @@ with left:
     allocation_df = pd.DataFrame({"Asset class": ASSET_CLASSES, "Weight": [weights[a] for a in ASSET_CLASSES]})
     st.plotly_chart(px.pie(allocation_df, names="Asset class", values="Weight", title="Portfolio allocation"), use_container_width=True)
 with right:
-    wealth = (1 + port_returns).cumprod() * starting_value
-    wealth_df = pd.DataFrame({"Illustrative portfolio value": wealth})
-    st.plotly_chart(px.line(wealth_df, title="Illustrative portfolio path", labels={"index": "Month", "value": "Portfolio value ($)"}), use_container_width=True)
+    wealth = portfolio_wealth_path(port_returns, starting_value)
+    wealth_df = pd.DataFrame({
+        "Period": ["Initial"] + returns.index.strftime("%b %Y").tolist(),
+        "Illustrative portfolio value": wealth.to_numpy(),
+    })
+    st.plotly_chart(
+        px.line(
+            wealth_df,
+            x="Period",
+            y="Illustrative portfolio value",
+            title="Illustrative portfolio path (including starting capital)",
+            labels={
+                "Period": "Period",
+                "Illustrative portfolio value": "Portfolio value ($)",
+            },
+        ),
+        use_container_width=True,
+    )
 
 
 st.subheader("Asset-level return contribution")

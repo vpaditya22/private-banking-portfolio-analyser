@@ -9,7 +9,7 @@ A small **Python + Streamlit** portfolio-analysis application exploring how asse
 - Portfolio-weight validation: allocations must cover the four asset classes and sum to 100%.
 - Reproducible synthetic monthly returns for global equities, high-quality bonds, gold, and cash.
 - Annualized return, annualized volatility, maximum drawdown, and a Sharpe-style ratio.
-- Interactive allocation and illustrative wealth-path charts.
+- Interactive allocation and wealth-path charts, with starting capital shown as the baseline.
 - Comparison of three example allocations against a user-defined allocation.
 - User-entered one-period stress scenarios and downloadable CSV comparison.
 - Unit tests for core calculations and input validation.
