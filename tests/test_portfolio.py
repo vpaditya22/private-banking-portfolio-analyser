@@ -187,7 +187,6 @@ def test_portfolio_contributions_reject_non_finite_returns(bad_value):
         portfolio_contributions(df, VALID)
 
 
-
 def test_portfolio_wealth_path_includes_starting_capital_and_compounds_returns():
     returns = pd.Series(
         [0.10, -0.20],
@@ -215,3 +214,13 @@ def test_portfolio_wealth_path_rejects_invalid_starting_value(starting_value):
 def test_portfolio_wealth_path_rejects_invalid_returns(bad_return):
     with pytest.raises(ValueError):
         portfolio_wealth_path(pd.Series([0.01, bad_return]))
+
+
+def test_portfolio_wealth_path_rejects_compounding_overflow():
+    with pytest.raises(ValueError, match="exceeds the numeric range"):
+        portfolio_wealth_path(pd.Series([1e308, 1e308]))
+
+
+def test_portfolio_wealth_path_rejects_starting_value_scaling_overflow():
+    with pytest.raises(ValueError, match="exceeds the numeric range"):
+        portfolio_wealth_path(pd.Series([1.0]), starting_value=1e308)
