@@ -74,8 +74,6 @@ def portfolio_returns(asset_returns: pd.DataFrame, weights: dict[str, float]) ->
     missing = set(ASSET_CLASSES) - set(asset_returns.columns)
     if missing:
         raise ValueError(f"Missing asset return columns: {', '.join(sorted(missing))}")
-    # pandas.DataFrame.sum skips NaNs by default; reject incomplete rows rather than
-    # silently treating missing asset returns as if they had zero contribution.
     clean_asset_returns = _validate_periodic_returns(asset_returns[ASSET_CLASSES])
     w = pd.Series(weights, dtype=float).reindex(clean_asset_returns.columns)
     return clean_asset_returns.mul(w, axis=1).sum(axis=1).rename("Portfolio return")
@@ -87,8 +85,6 @@ def max_drawdown(returns: pd.Series) -> float:
     if clean.empty:
         raise ValueError("At least one return observation is required.")
     wealth = (1.0 + clean).cumprod()
-    # Initial portfolio value is 1.0 and must remain part of the high-water mark.
-    # Without this floor, a loss in the first period would incorrectly show 0% drawdown.
     peaks = wealth.cummax().clip(lower=1.0)
     drawdowns = wealth / peaks - 1.0
     return float(drawdowns.min())
@@ -164,8 +160,13 @@ def portfolio_wealth_path(returns: pd.Series, starting_value: float = 1.0) -> pd
     if not np.isfinite(initial_value) or initial_value <= 0:
         raise ValueError("Starting portfolio value must be finite and greater than zero.")
 
-    period_growth = (1.0 + clean).cumprod().to_numpy(dtype=float)
-    values = initial_value * np.concatenate(([1.0], period_growth))
+    # Finite inputs can still overflow when compounded or scaled by starting capital.
+    with np.errstate(over="ignore", invalid="ignore"):
+        period_growth = (1.0 + clean).cumprod().to_numpy(dtype=float)
+        values = initial_value * np.concatenate(([1.0], period_growth))
+    if not np.isfinite(values).all():
+        raise ValueError("Portfolio wealth path exceeds the numeric range; reduce returns or starting value.")
+
     return pd.Series(
         values,
         index=pd.RangeIndex(len(values), name="Period"),
