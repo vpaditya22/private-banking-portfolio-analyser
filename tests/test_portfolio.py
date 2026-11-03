@@ -9,6 +9,7 @@ from src.portfolio import (
     portfolio_returns,
     portfolio_contributions,
     portfolio_wealth_path,
+    rolling_risk_metrics,
     synthetic_monthly_returns,
     validate_weights,
 )
@@ -93,6 +94,50 @@ def test_max_drawdown_negative_after_loss():
 )
 def test_max_drawdown_uses_initial_capital_as_high_water_mark(periodic_returns, expected):
     assert max_drawdown(pd.Series(periodic_returns)) == pytest.approx(expected)
+
+
+def test_max_drawdown_remains_stable_when_compounded_wealth_overflows():
+    returns = pd.Series([1e308, 1e308, -0.50])
+    assert max_drawdown(returns) == pytest.approx(-0.50)
+
+
+def test_rolling_risk_metrics_preserve_index_and_wait_for_full_window():
+    index = pd.date_range("2025-01-31", periods=3, freq="ME")
+    returns = pd.Series([0.10, -0.20, 0.05], index=index)
+
+    result = rolling_risk_metrics(returns, window=2)
+
+    assert result.index.equals(index)
+    assert list(result.columns) == [
+        "Rolling annualized volatility",
+        "Rolling maximum drawdown",
+    ]
+    assert result.iloc[0].isna().all()
+    expected_volatility = pd.Series([0.10, -0.20]).std(ddof=1) * (12 ** 0.5)
+    assert result.iloc[1]["Rolling annualized volatility"] == pytest.approx(expected_volatility)
+    assert result.iloc[1]["Rolling maximum drawdown"] == pytest.approx(-0.20)
+    assert result.iloc[2]["Rolling maximum drawdown"] == pytest.approx(-0.20)
+
+
+def test_rolling_risk_metrics_returns_nan_when_history_is_shorter_than_window():
+    result = rolling_risk_metrics(pd.Series([0.01, 0.02]), window=3)
+    assert result.isna().all().all()
+
+
+@pytest.mark.parametrize("window", [1, 0, -1, 1.5, True])
+def test_rolling_risk_metrics_reject_invalid_window(window):
+    with pytest.raises(ValueError, match="Rolling window"):
+        rolling_risk_metrics(pd.Series([0.01, 0.02]), window=window)
+
+
+def test_rolling_risk_metrics_reject_non_finite_returns():
+    with pytest.raises(ValueError, match="Periodic returns must be finite"):
+        rolling_risk_metrics(pd.Series([0.01, float("nan")]), window=2)
+
+
+def test_rolling_risk_metrics_reject_empty_returns():
+    with pytest.raises(ValueError, match="At least one return observation"):
+        rolling_risk_metrics(pd.Series(dtype=float), window=2)
 
 
 def test_stress_shock_weighted_sum():
