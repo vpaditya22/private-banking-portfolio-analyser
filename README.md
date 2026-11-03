@@ -10,6 +10,7 @@ A small **Python + Streamlit** portfolio-analysis application exploring how asse
 - Reproducible synthetic monthly returns for global equities, high-quality bonds, gold, and cash.
 - Annualized return, annualized volatility, maximum drawdown, and a Sharpe-style ratio.
 - Interactive allocation and wealth-path charts, with starting capital shown as the baseline.
+- Trailing 12-month annualized volatility and maximum drawdown to show how risk changes over time.
 - Comparison of three example allocations against a user-defined allocation.
 - User-entered one-period stress scenarios and downloadable CSV comparison.
 - Unit tests for core calculations and input validation.
@@ -55,6 +56,7 @@ streamlit run app.py
 - **Annualized return:** compounds the periodic returns to an annual rate.
 - **Annualized volatility:** sample standard deviation of monthly returns multiplied by the square root of 12.
 - **Maximum drawdown:** largest peak-to-trough decline in the illustrative wealth index.
+- **Rolling risk:** trailing 12-month sample volatility annualized by the square root of 12, plus maximum drawdown recalculated within each trailing window; the first 11 observations are blank.
 - **Sharpe-style ratio:** annualized mean excess monthly return divided by monthly volatility, using the risk-free rate entered in the app.
 - **Stress test:** weighted sum of the selected asset-class shocks for one hypothetical period.
 

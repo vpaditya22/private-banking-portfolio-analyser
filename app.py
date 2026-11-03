@@ -16,6 +16,7 @@ from src.portfolio import (
     portfolio_returns,
     portfolio_contributions,
     portfolio_wealth_path,
+    rolling_risk_metrics,
     synthetic_monthly_returns,
 )
 
@@ -75,6 +76,37 @@ with right:
         ),
         use_container_width=True,
     )
+
+
+rolling_risk = rolling_risk_metrics(port_returns, window=12)
+rolling_risk_df = rolling_risk.rename_axis("Period").reset_index()
+
+st.subheader("Trailing 12-month risk")
+st.caption(
+    "Each point uses the latest 12 synthetic monthly observations. "
+    "The first 11 months are omitted until a complete lookback window is available."
+)
+risk_volatility_col, risk_drawdown_col = st.columns(2)
+with risk_volatility_col:
+    volatility_chart = px.line(
+        rolling_risk_df,
+        x="Period",
+        y="Rolling annualized volatility",
+        title="Rolling annualized volatility",
+        labels={"Rolling annualized volatility": "Annualized volatility"},
+    )
+    volatility_chart.update_yaxes(tickformat=".0%")
+    st.plotly_chart(volatility_chart, use_container_width=True)
+with risk_drawdown_col:
+    drawdown_chart = px.line(
+        rolling_risk_df,
+        x="Period",
+        y="Rolling maximum drawdown",
+        title="Rolling maximum drawdown",
+        labels={"Rolling maximum drawdown": "Maximum drawdown"},
+    )
+    drawdown_chart.update_yaxes(tickformat=".0%")
+    st.plotly_chart(drawdown_chart, use_container_width=True)
 
 
 st.subheader("Asset-level return contribution")
