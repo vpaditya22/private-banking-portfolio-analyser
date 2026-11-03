@@ -79,15 +79,52 @@ def portfolio_returns(asset_returns: pd.DataFrame, weights: dict[str, float]) ->
     return clean_asset_returns.mul(w, axis=1).sum(axis=1).rename("Portfolio return")
 
 
+def _max_drawdown_from_values(values: np.ndarray) -> float:
+    """Calculate drawdown from a NumPy array without compounding overflow."""
+    log_wealth = np.cumsum(np.log1p(values))
+    high_water_marks = np.maximum.accumulate(np.concatenate(([0.0], log_wealth)))[1:]
+    drawdowns = np.expm1(log_wealth - high_water_marks)
+    return float(drawdowns.min())
+
+
 def max_drawdown(returns: pd.Series) -> float:
     """Maximum peak-to-trough drawdown, including losses from initial capital."""
     clean = _validate_periodic_returns(returns)
     if clean.empty:
         raise ValueError("At least one return observation is required.")
-    wealth = (1.0 + clean).cumprod()
-    peaks = wealth.cummax().clip(lower=1.0)
-    drawdowns = wealth / peaks - 1.0
-    return float(drawdowns.min())
+    return _max_drawdown_from_values(clean.to_numpy(dtype=float))
+
+
+def rolling_risk_metrics(returns: pd.Series, window: int = 12) -> pd.DataFrame:
+    """Calculate trailing annualized volatility and maximum drawdown.
+
+    The first window - 1 rows contain NaN because a complete lookback
+    period is not yet available. Drawdown includes the initial capital baseline
+    at the start of each rolling window.
+    """
+    if (
+        isinstance(window, (bool, np.bool_))
+        or not isinstance(window, (int, np.integer))
+        or window < 2
+    ):
+        raise ValueError("Rolling window must be an integer of at least two periods.")
+
+    clean = _validate_periodic_returns(returns)
+    if clean.empty:
+        raise ValueError("At least one return observation is required.")
+
+    rolling_volatility = clean.rolling(window=window, min_periods=window).std(ddof=1) * np.sqrt(12)
+    rolling_drawdown = clean.rolling(window=window, min_periods=window).apply(
+        _max_drawdown_from_values,
+        raw=True,
+    )
+    return pd.DataFrame(
+        {
+            "Rolling annualized volatility": rolling_volatility,
+            "Rolling maximum drawdown": rolling_drawdown,
+        },
+        index=clean.index,
+    )
 
 
 def performance_metrics(returns: pd.Series, annual_risk_free_rate: float = 0.03) -> dict[str, float]:
