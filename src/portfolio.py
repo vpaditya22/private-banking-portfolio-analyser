@@ -40,6 +40,25 @@ def validate_weights(weights: dict[str, float], tolerance: float = 1e-6) -> None
         raise ValueError("Portfolio weights must sum to 100%.")
 
 
+def allocation_concentration_metrics(weights: dict[str, float]) -> dict[str, float | str]:
+    """Summarize weight concentration without implying asset-class correlation.
+
+    The Herfindahl-Hirschman index is the sum of squared portfolio weights.
+    Its reciprocal is the effective number of equally weighted asset classes
+    that would produce the same concentration.
+    """
+    validate_weights(weights)
+    ordered_weights = np.array([float(weights[asset]) for asset in ASSET_CLASSES], dtype=float)
+    concentration_index = float(np.square(ordered_weights).sum())
+    largest_index = int(np.argmax(ordered_weights))
+    return {
+        "Herfindahl-Hirschman index": concentration_index,
+        "Effective number of asset classes": 1.0 / concentration_index,
+        "Largest asset class": ASSET_CLASSES[largest_index],
+        "Largest allocation": float(ordered_weights[largest_index]),
+    }
+
+
 def _validate_periodic_returns(returns: pd.Series | pd.DataFrame) -> pd.Series | pd.DataFrame:
     """Reject invalid simple returns before they can distort portfolio metrics."""
     numeric = returns.astype(float)
