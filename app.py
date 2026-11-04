@@ -9,6 +9,7 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).parent))
 from src.portfolio import (
     ASSET_CLASSES,
+    allocation_concentration_metrics,
     DEFAULT_WEIGHTS,
     SAMPLE_ALLOCATIONS,
     apply_one_period_shock,
@@ -52,6 +53,28 @@ for col, (label, value, fmt) in zip(cols, [
     ("Sharpe-style ratio", metrics["Sharpe-style ratio"], "{:.2f}"),
 ]):
     col.metric(label, fmt.format(value))
+
+concentration = allocation_concentration_metrics(weights)
+st.subheader("Allocation concentration")
+concentration_cols = st.columns(3)
+concentration_cols[0].metric(
+    "Herfindahl-Hirschman index",
+    f'{concentration["Herfindahl-Hirschman index"]:.3f}',
+    help="Sum of squared allocation weights. Lower values indicate more evenly distributed weights.",
+)
+concentration_cols[1].metric(
+    "Effective number of asset classes",
+    f'{concentration["Effective number of asset classes"]:.2f}',
+    help="The reciprocal of the concentration index; it expresses the allocation as an equivalent number of equally weighted asset classes.",
+)
+concentration_cols[2].metric(
+    "Largest allocation",
+    f'{concentration["Largest asset class"]} ({concentration["Largest allocation"]:.0%})',
+)
+st.caption(
+    "Weight concentration is not a standalone risk measure and does not account for "
+    "correlations, underlying holdings, or liquidity."
+)
 
 left, right = st.columns(2)
 with left:
