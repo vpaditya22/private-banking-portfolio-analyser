@@ -3,6 +3,7 @@ import pytest
 
 from src.portfolio import (
     ASSET_CLASSES,
+    allocation_concentration_metrics,
     apply_one_period_shock,
     max_drawdown,
     performance_metrics,
@@ -24,6 +25,34 @@ VALID = {
 
 def test_valid_weights():
     validate_weights(VALID)
+
+
+def test_allocation_concentration_metrics_for_equal_weights():
+    equal_weights = {asset: 0.25 for asset in ASSET_CLASSES}
+
+    metrics = allocation_concentration_metrics(equal_weights)
+
+    assert metrics["Herfindahl-Hirschman index"] == pytest.approx(0.25)
+    assert metrics["Effective number of asset classes"] == pytest.approx(4.0)
+    assert metrics["Largest asset class"] == "Global equities"
+    assert metrics["Largest allocation"] == pytest.approx(0.25)
+
+
+def test_allocation_concentration_metrics_for_unequal_weights():
+    metrics = allocation_concentration_metrics(VALID)
+
+    assert metrics["Herfindahl-Hirschman index"] == pytest.approx(0.36)
+    assert metrics["Effective number of asset classes"] == pytest.approx(1 / 0.36)
+    assert metrics["Largest asset class"] == "Global equities"
+    assert metrics["Largest allocation"] == pytest.approx(0.50)
+
+
+def test_allocation_concentration_metrics_reject_invalid_weights():
+    invalid_weights = dict(VALID)
+    invalid_weights["Cash"] = 0.05
+
+    with pytest.raises(ValueError, match="sum to 100%"):
+        allocation_concentration_metrics(invalid_weights)
 
 
 def test_weights_must_sum_to_one():
