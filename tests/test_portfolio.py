@@ -4,6 +4,7 @@ import pytest
 from src.portfolio import (
     ASSET_CLASSES,
     allocation_concentration_metrics,
+    asset_return_correlation_matrix,
     apply_one_period_shock,
     max_drawdown,
     performance_metrics,
@@ -54,6 +55,71 @@ def test_allocation_concentration_metrics_reject_invalid_weights():
     with pytest.raises(ValueError, match="sum to 100%"):
         allocation_concentration_metrics(invalid_weights)
 
+
+
+def test_asset_return_correlation_matrix_is_symmetric_and_uses_asset_order():
+    returns = pd.DataFrame({
+        "Cash": [0.015, 0.025, 0.020, 0.030],
+        "Gold": [0.020, 0.040, 0.060, 0.080],
+        "Global equities": [0.010, 0.020, 0.030, 0.040],
+        "High-quality bonds": [0.040, 0.030, 0.020, 0.010],
+    })
+
+    correlation = asset_return_correlation_matrix(returns)
+
+    assert list(correlation.index) == ASSET_CLASSES
+    assert list(correlation.columns) == ASSET_CLASSES
+    pd.testing.assert_frame_equal(correlation, correlation.T)
+    assert correlation.to_numpy().diagonal() == pytest.approx([1.0] * len(ASSET_CLASSES))
+    assert correlation.loc["Global equities", "High-quality bonds"] == pytest.approx(-1.0)
+    assert correlation.loc["Global equities", "Gold"] == pytest.approx(1.0)
+
+
+def test_asset_return_correlation_matrix_rejects_missing_columns():
+    returns = pd.DataFrame({"Global equities": [0.01, 0.02]})
+
+    with pytest.raises(ValueError, match="Missing asset return columns"):
+        asset_return_correlation_matrix(returns)
+
+
+def test_asset_return_correlation_matrix_rejects_duplicate_asset_columns():
+    returns = pd.DataFrame(
+        [[0.01, 0.02, 0.03, 0.04, 0.05], [0.02, 0.03, 0.04, 0.05, 0.06]],
+        columns=[
+            "Global equities",
+            "Global equities",
+            "High-quality bonds",
+            "Gold",
+            "Cash",
+        ],
+    )
+
+    with pytest.raises(ValueError, match="Duplicate asset return columns"):
+        asset_return_correlation_matrix(returns)
+
+
+def test_asset_return_correlation_matrix_requires_two_observations():
+    returns = pd.DataFrame({asset: [0.01] for asset in ASSET_CLASSES})
+
+    with pytest.raises(ValueError, match="At least two return observations"):
+        asset_return_correlation_matrix(returns)
+
+
+def test_asset_return_correlation_matrix_rejects_zero_variance_assets():
+    returns = pd.DataFrame({asset: [0.01, 0.02, 0.03] for asset in ASSET_CLASSES})
+    returns["Cash"] = 0.01
+
+    with pytest.raises(ValueError, match="zero-variance asset classes: Cash"):
+        asset_return_correlation_matrix(returns)
+
+
+@pytest.mark.parametrize("bad_return", [float("nan"), float("inf"), -1.0])
+def test_asset_return_correlation_matrix_rejects_invalid_returns(bad_return):
+    returns = pd.DataFrame({asset: [0.01, 0.02, 0.03] for asset in ASSET_CLASSES})
+    returns.loc[1, "Gold"] = bad_return
+
+    with pytest.raises(ValueError, match="Periodic returns"):
+        asset_return_correlation_matrix(returns)
 
 def test_weights_must_sum_to_one():
     bad = dict(VALID)
