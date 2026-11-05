@@ -18,6 +18,14 @@ Maximum drawdown is the largest percentage decline from a prior wealth-index pea
 
 The dashboard's simplified ratio compares annualized mean excess monthly return with monthly volatility. Because the numerator and denominator may use different annualization conventions, treat this as an illustrative comparison only—not a standardized institutional Sharpe ratio. A ratio based on synthetic returns should not be compared directly with reported fund performance.
 
+
+## Asset-class return correlation
+
+The dashboard displays Pearson correlations between the four synthetic monthly asset-class return series. Values range from -1 (perfect inverse linear co-movement) to +1 (perfect positive linear co-movement); values near zero indicate little linear association in this sample.
+
+The matrix is calculated from the same seeded illustrative observations used elsewhere in the dashboard. It is not based on market data, does not establish causation, and should not be treated as a stable estimate of future diversification. Correlation can change across market regimes, and a low pairwise correlation does not eliminate portfolio loss or liquidity risk. The calculation rejects a series with zero variance because its correlation is undefined.
+
+
 ## Stress scenario
 
 The stress result is the weighted sum of user-entered asset-class shocks for one hypothetical period. It assumes the selected weights remain fixed and does not model correlations, changing prices within the period, rebalancing, fees, taxes, currency effects, liquidity, or client liabilities. It is not a forecast or a worst-case estimate.

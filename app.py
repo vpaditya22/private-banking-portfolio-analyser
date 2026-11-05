@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from src.portfolio import (
     ASSET_CLASSES,
     allocation_concentration_metrics,
+    asset_return_correlation_matrix,
     DEFAULT_WEIGHTS,
     SAMPLE_ALLOCATIONS,
     apply_one_period_shock,
@@ -99,6 +100,26 @@ with right:
         ),
         use_container_width=True,
     )
+
+
+correlation = asset_return_correlation_matrix(returns)
+st.subheader("Asset-class return correlation")
+st.caption(
+    "Pearson correlations across the same 60 seeded synthetic monthly observations. "
+    "These describe this illustrative sample only and are not forecasts or evidence "
+    "of live-market diversification."
+)
+correlation_chart = px.imshow(
+    correlation,
+    text_auto=".2f",
+    zmin=-1.0,
+    zmax=1.0,
+    color_continuous_scale="RdBu_r",
+    aspect="auto",
+    title="Synthetic monthly asset-class return correlations",
+)
+correlation_chart.update_layout(coloraxis_colorbar_title="Correlation")
+st.plotly_chart(correlation_chart, use_container_width=True)
 
 
 rolling_risk = rolling_risk_metrics(port_returns, window=12)

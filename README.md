@@ -12,6 +12,7 @@ A small **Python + Streamlit** portfolio-analysis application exploring how asse
 - Interactive allocation and wealth-path charts, with starting capital shown as the baseline.
 - Trailing 12-month annualized volatility and maximum drawdown to show how risk changes over time.
 - Allocation concentration analytics: Herfindahl-Hirschman index, effective number of asset classes, and largest allocation.
+- Pearson correlation heatmap for the four synthetic asset-class return series, with validation for undefined correlations.
 - Comparison of three example allocations against a user-defined allocation.
 - User-entered one-period stress scenarios and downloadable CSV comparison.
 - Unit tests for core calculations and input validation.
@@ -59,6 +60,7 @@ streamlit run app.py
 - **Maximum drawdown:** largest peak-to-trough decline in the illustrative wealth index.
 - **Rolling risk:** trailing 12-month sample volatility annualized by the square root of 12, plus maximum drawdown recalculated within each trailing window; the first 11 observations are blank.
 - **Allocation concentration:** sum of squared asset-class weights (Herfindahl-Hirschman index); its reciprocal is the effective number of equally weighted asset classes. This measures weight concentration only, not correlations or total portfolio risk.
+- **Asset-class correlation:** Pearson correlation across the four seeded synthetic monthly return series. The matrix describes sample co-movement only; it is not a forecast, a measure of allocation concentration, or evidence of live-market diversification.
 - **Sharpe-style ratio:** annualized mean excess monthly return divided by monthly volatility, using the risk-free rate entered in the app.
 - **Stress test:** weighted sum of the selected asset-class shocks for one hypothetical period.
 
