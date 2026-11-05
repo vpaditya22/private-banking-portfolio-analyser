@@ -59,6 +59,48 @@ def allocation_concentration_metrics(weights: dict[str, float]) -> dict[str, flo
     }
 
 
+
+def asset_return_correlation_matrix(asset_returns: pd.DataFrame) -> pd.DataFrame:
+    """Return Pearson correlations for the required asset-class return series.
+
+    All four asset classes must have at least two finite observations and
+    non-zero sample variance. Correlation is descriptive, not a forecast.
+    """
+    if not isinstance(asset_returns, pd.DataFrame):
+        raise ValueError("Asset returns must be provided as a pandas DataFrame.")
+
+    duplicate_assets = [
+        asset for asset in ASSET_CLASSES
+        if int((asset_returns.columns == asset).sum()) > 1
+    ]
+    if duplicate_assets:
+        raise ValueError(
+            f"Duplicate asset return columns: {', '.join(duplicate_assets)}"
+        )
+
+    missing = set(ASSET_CLASSES) - set(asset_returns.columns)
+    if missing:
+        raise ValueError(f"Missing asset return columns: {', '.join(sorted(missing))}")
+
+    clean = _validate_periodic_returns(asset_returns[ASSET_CLASSES])
+    if len(clean) < 2:
+        raise ValueError("At least two return observations are required for correlation.")
+
+    zero_variance = clean.columns[clean.std(ddof=1).eq(0)].tolist()
+    if zero_variance:
+        raise ValueError(
+            "Correlation is undefined for zero-variance asset classes: "
+            f"{', '.join(zero_variance)}"
+        )
+
+    correlation = clean.corr(method="pearson").reindex(
+        index=ASSET_CLASSES,
+        columns=ASSET_CLASSES,
+    )
+    if not np.isfinite(correlation.to_numpy(dtype=float)).all():
+        raise ValueError("Correlation matrix contains undefined values.")
+    return correlation
+
 def _validate_periodic_returns(returns: pd.Series | pd.DataFrame) -> pd.Series | pd.DataFrame:
     """Reject invalid simple returns before they can distort portfolio metrics."""
     numeric = returns.astype(float)
