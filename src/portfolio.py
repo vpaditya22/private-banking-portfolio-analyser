@@ -188,6 +188,41 @@ def rolling_risk_metrics(returns: pd.Series, window: int = 12) -> pd.DataFrame:
     )
 
 
+
+def historical_tail_risk(
+    returns: pd.Series,
+    confidence_level: float = 0.95,
+) -> dict[str, float]:
+    """Estimate empirical historical VaR and CVaR as positive loss fractions.
+
+    VaR is the loss threshold at the selected confidence level. CVaR is the
+    average loss among observations at or below the corresponding return
+    quantile. Both are descriptive sample estimates, not forecasts.
+    """
+    clean = _validate_periodic_returns(returns)
+    if clean.empty:
+        raise ValueError("At least one return observation is required.")
+
+    try:
+        confidence = float(confidence_level)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Confidence level must be finite and between 0 and 1.") from exc
+    if not np.isfinite(confidence) or not 0 < confidence < 1:
+        raise ValueError("Confidence level must be finite and between 0 and 1.")
+
+    values = clean.to_numpy(dtype=float)
+    return_threshold = float(np.quantile(values, 1.0 - confidence, method="linear"))
+    tail_returns = values[values <= return_threshold]
+    tail_mean = float(np.mean(tail_returns))
+    if not np.isfinite(return_threshold) or not np.isfinite(tail_mean):
+        raise ValueError("Historical tail-risk calculation exceeds the numeric range.")
+
+    return {
+        "Value at Risk": max(0.0, -return_threshold),
+        "Conditional Value at Risk": max(0.0, -tail_mean),
+    }
+
+
 def performance_metrics(returns: pd.Series, annual_risk_free_rate: float = 0.03) -> dict[str, float]:
     """Compute historical-style summary metrics from a periodic return series."""
     clean = _validate_periodic_returns(returns)
@@ -202,12 +237,15 @@ def performance_metrics(returns: pd.Series, annual_risk_free_rate: float = 0.03)
     monthly_rf = (1 + annual_risk_free_rate) ** (1 / periods_per_year) - 1
     excess = clean - monthly_rf
     sharpe = float((excess.mean() / clean.std(ddof=1)) * np.sqrt(periods_per_year)) if clean.std(ddof=1) else 0.0
+    tail_risk = historical_tail_risk(clean, confidence_level=0.95)
     return {
         "Annualized return": float(annualized_return),
         "Annualized volatility": annualized_volatility,
         "Maximum drawdown": max_drawdown(clean),
         "Sharpe-style ratio": sharpe,
         "Cumulative return": total_growth - 1,
+        "Historical VaR (95%)": tail_risk["Value at Risk"],
+        "Historical CVaR (95%)": tail_risk["Conditional Value at Risk"],
     }
 
 
