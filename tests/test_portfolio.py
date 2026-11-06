@@ -7,6 +7,7 @@ from src.portfolio import (
     asset_return_correlation_matrix,
     apply_one_period_shock,
     max_drawdown,
+    historical_tail_risk,
     performance_metrics,
     portfolio_returns,
     portfolio_contributions,
@@ -233,6 +234,47 @@ def test_rolling_risk_metrics_reject_non_finite_returns():
 def test_rolling_risk_metrics_reject_empty_returns():
     with pytest.raises(ValueError, match="At least one return observation"):
         rolling_risk_metrics(pd.Series(dtype=float), window=2)
+
+
+
+def test_historical_tail_risk_returns_positive_var_and_cvar_estimates():
+    returns = pd.Series([-0.30, -0.20, -0.10, -0.05, 0.0, 0.10, 0.20, 0.30, 0.40, 0.50])
+
+    result = historical_tail_risk(returns, confidence_level=0.80)
+
+    assert result["Value at Risk"] == pytest.approx(0.12)
+    assert result["Conditional Value at Risk"] == pytest.approx(0.25)
+
+
+def test_historical_tail_risk_is_zero_when_sample_tail_has_no_losses():
+    result = historical_tail_risk(pd.Series([0.01, 0.02, 0.03, 0.04]))
+
+    assert result["Value at Risk"] == 0.0
+    assert result["Conditional Value at Risk"] == 0.0
+
+
+def test_historical_tail_risk_rejects_empty_returns():
+    with pytest.raises(ValueError, match="At least one return observation"):
+        historical_tail_risk(pd.Series(dtype=float))
+
+
+@pytest.mark.parametrize("confidence_level", [0, 1, -0.1, 1.1, float("nan"), float("inf")])
+def test_historical_tail_risk_rejects_invalid_confidence_level(confidence_level):
+    with pytest.raises(ValueError, match="Confidence level"):
+        historical_tail_risk(pd.Series([-0.02, 0.01, 0.03]), confidence_level)
+
+
+@pytest.mark.parametrize("bad_return", [float("nan"), float("inf"), -1.0])
+def test_historical_tail_risk_rejects_invalid_returns(bad_return):
+    with pytest.raises(ValueError, match="Periodic returns"):
+        historical_tail_risk(pd.Series([-0.02, bad_return, 0.03]))
+
+
+def test_metrics_include_95_percent_historical_tail_risk():
+    metrics = performance_metrics(pd.Series([-0.10, 0.02, 0.03, 0.01]))
+
+    assert metrics["Historical VaR (95%)"] >= 0
+    assert metrics["Historical CVaR (95%)"] >= metrics["Historical VaR (95%)"]
 
 
 def test_stress_shock_weighted_sum():
