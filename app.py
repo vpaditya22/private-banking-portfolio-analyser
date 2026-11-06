@@ -55,6 +55,25 @@ for col, (label, value, fmt) in zip(cols, [
 ]):
     col.metric(label, fmt.format(value))
 
+st.subheader("Historical downside risk (95%)")
+st.caption(
+    "Empirical loss estimates from the synthetic monthly sample. VaR is the "
+    "5th-percentile loss threshold; CVaR is the average loss in observations "
+    "at or below that threshold. With only 60 observations, these tail estimates "
+    "are highly sample-sensitive and are not forecasts or risk limits."
+)
+tail_cols = st.columns(2)
+tail_cols[0].metric(
+    "Historical VaR (95%)",
+    f'{metrics["Historical VaR (95%)"]:.2%}',
+    help="Positive loss at the empirical 5th-percentile monthly return threshold.",
+)
+tail_cols[1].metric(
+    "Historical CVaR (95%)",
+    f'{metrics["Historical CVaR (95%)"]:.2%}',
+    help="Average positive loss among observations at or below the historical VaR return threshold.",
+)
+
 concentration = allocation_concentration_metrics(weights)
 st.subheader("Allocation concentration")
 concentration_cols = st.columns(3)
@@ -209,6 +228,8 @@ st.dataframe(
         "Maximum drawdown": "{:.2%}",
         "Cumulative return": "{:.2%}",
         "Sharpe-style ratio": "{:.2f}",
+        "Historical VaR (95%)": "{:.2%}",
+        "Historical CVaR (95%)": "{:.2%}",
     }),
     use_container_width=True,
     hide_index=True,
@@ -237,6 +258,7 @@ with st.expander("Methodology and limitations"):
     - Monthly asset-class returns are synthetic and seeded for reproducibility.
     - Annualized return compounds the generated monthly returns; volatility uses monthly standard deviation × √12.
     - Maximum drawdown measures the largest peak-to-trough decline in the illustrative wealth index.
+    - Historical 95% VaR is the empirical 5th-percentile monthly loss threshold; CVaR is the average loss among observations at or below that threshold. With 60 synthetic observations, both estimates are highly sample-sensitive.
     - The Sharpe-style ratio depends on the assumed risk-free rate.
     - Stress testing applies a simple weighted sum of one-period shocks; it does not model correlations, path dependence, fees, taxes, currency effects or client-specific liabilities.
     - A real advisory process would require client-specific objectives, time horizon, liquidity requirements, liabilities, risk tolerance and appropriate professional review.
