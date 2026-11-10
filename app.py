@@ -36,6 +36,13 @@ with st.sidebar:
     weight_sum = sum(weights.values())
     st.write(f"**Total allocation:** {weight_sum:.0%}")
     annual_rf = st.number_input("Assumed annual risk-free rate (%)", min_value=0.0, max_value=20.0, value=3.0, step=0.25) / 100
+    annual_target_return = st.number_input(
+        "Annual minimum acceptable return for Sortino (%)",
+        min_value=-50.0,
+        max_value=100.0,
+        value=3.0,
+        step=0.5,
+    ) / 100
 
 if not np.isclose(weight_sum, 1.0):
     st.error("Your allocation must total exactly 100% before the analysis can be interpreted.")
@@ -43,7 +50,7 @@ if not np.isclose(weight_sum, 1.0):
 
 returns = synthetic_monthly_returns()
 port_returns = portfolio_returns(returns, weights)
-metrics = performance_metrics(port_returns, annual_rf)
+metrics = performance_metrics(port_returns, annual_rf, annual_target_return)
 
 st.info("The return series is generated from seeded synthetic distributions to make this demo reproducible. It is not actual historical performance.")
 cols = st.columns(4)
@@ -72,6 +79,26 @@ tail_cols[1].metric(
     "Historical CVaR (95%)",
     f'{metrics["Historical CVaR (95%)"]:.2%}',
     help="Average positive loss among observations at or below the historical VaR return threshold.",
+)
+
+st.subheader("Target-based downside risk")
+st.caption(
+    f"Sortino analysis uses an annual minimum acceptable return of {annual_target_return:.2%}, "
+    "converted to an effective monthly target. Downside deviation includes only "
+    "shortfalls below that target and is annualized by the square root of 12."
+)
+sortino_cols = st.columns(2)
+sortino_value = metrics["Sortino ratio"]
+sortino_display = f"{sortino_value:.2f}" if np.isfinite(sortino_value) else "N/A"
+sortino_cols[0].metric(
+    "Annualized downside deviation",
+    f'{metrics["Annualized downside deviation"]:.2%}',
+    help="Root-mean-square monthly shortfall below the selected target, annualized by √12.",
+)
+sortino_cols[1].metric(
+    "Sortino ratio",
+    sortino_display,
+    help="Arithmetic annualized excess return above the selected target divided by annualized downside deviation. N/A means no downside observations were present.",
 )
 
 concentration = allocation_concentration_metrics(weights)
@@ -217,7 +244,7 @@ st.download_button(
 st.subheader("Allocation comparison")
 comparison = []
 for name, allocation in SAMPLE_ALLOCATIONS.items():
-    m = performance_metrics(portfolio_returns(returns, allocation), annual_rf)
+    m = performance_metrics(portfolio_returns(returns, allocation), annual_rf, annual_target_return)
     comparison.append({"Illustrative allocation": name, **m})
 comparison.append({"Illustrative allocation": "Your allocation", **metrics})
 comparison_df = pd.DataFrame(comparison)
@@ -230,6 +257,8 @@ st.dataframe(
         "Sharpe-style ratio": "{:.2f}",
         "Historical VaR (95%)": "{:.2%}",
         "Historical CVaR (95%)": "{:.2%}",
+        "Annualized downside deviation": "{:.2%}",
+        "Sortino ratio": "{:.2f}",
     }),
     use_container_width=True,
     hide_index=True,
@@ -259,6 +288,7 @@ with st.expander("Methodology and limitations"):
     - Annualized return compounds the generated monthly returns; volatility uses monthly standard deviation × √12.
     - Maximum drawdown measures the largest peak-to-trough decline in the illustrative wealth index.
     - Historical 95% VaR is the empirical 5th-percentile monthly loss threshold; CVaR is the average loss among observations at or below that threshold. With 60 synthetic observations, both estimates are highly sample-sensitive.
+    - Sortino ratio compares arithmetic annualized excess return above the selected minimum acceptable return with annualized downside deviation. If no monthly observations fall below the target, the ratio is undefined and shown as N/A.
     - The Sharpe-style ratio depends on the assumed risk-free rate.
     - Stress testing applies a simple weighted sum of one-period shocks; it does not model correlations, path dependence, fees, taxes, currency effects or client-specific liabilities.
     - A real advisory process would require client-specific objectives, time horizon, liquidity requirements, liabilities, risk tolerance and appropriate professional review.
