@@ -223,7 +223,54 @@ def historical_tail_risk(
     }
 
 
-def performance_metrics(returns: pd.Series, annual_risk_free_rate: float = 0.03) -> dict[str, float]:
+def downside_risk_metrics(
+    returns: pd.Series,
+    annual_target_return: float = 0.0,
+) -> dict[str, float]:
+    """Calculate annualized downside deviation and a Sortino-style ratio.
+
+    The annual target is converted to an effective monthly target. Downside
+    deviation is the root-mean-square of all monthly shortfalls below that
+    target, annualized by sqrt(12). The ratio numerator is arithmetic annualized
+    excess return. If no observations fall below target, the ratio is NaN
+    because downside deviation is zero and the ratio is undefined.
+    """
+    clean = _validate_periodic_returns(returns)
+    if clean.empty:
+        raise ValueError("At least one return observation is required.")
+
+    try:
+        target = float(annual_target_return)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Annual target return must be finite and greater than -100%.") from exc
+    if not np.isfinite(target) or target <= -1:
+        raise ValueError("Annual target return must be finite and greater than -100%.")
+
+    monthly_target = (1.0 + target) ** (1.0 / 12.0) - 1.0
+    values = clean.to_numpy(dtype=float)
+    with np.errstate(over="ignore", invalid="ignore"):
+        shortfalls = np.minimum(values - monthly_target, 0.0)
+        downside_deviation = float(np.sqrt(np.mean(np.square(shortfalls))) * np.sqrt(12.0))
+        annualized_excess_return = float((np.mean(values) - monthly_target) * 12.0)
+    if not np.isfinite(downside_deviation) or not np.isfinite(annualized_excess_return):
+        raise ValueError("Downside-risk calculation exceeds the numeric range.")
+
+    sortino = (
+        annualized_excess_return / downside_deviation
+        if downside_deviation > 0
+        else float("nan")
+    )
+    return {
+        "Annualized downside deviation": downside_deviation,
+        "Sortino ratio": float(sortino),
+    }
+
+
+def performance_metrics(
+    returns: pd.Series,
+    annual_risk_free_rate: float = 0.03,
+    annual_target_return: float = 0.0,
+) -> dict[str, float]:
     """Compute historical-style summary metrics from a periodic return series."""
     clean = _validate_periodic_returns(returns)
     if len(clean) < 2:
@@ -238,6 +285,7 @@ def performance_metrics(returns: pd.Series, annual_risk_free_rate: float = 0.03)
     excess = clean - monthly_rf
     sharpe = float((excess.mean() / clean.std(ddof=1)) * np.sqrt(periods_per_year)) if clean.std(ddof=1) else 0.0
     tail_risk = historical_tail_risk(clean, confidence_level=0.95)
+    downside_risk = downside_risk_metrics(clean, annual_target_return=annual_target_return)
     return {
         "Annualized return": float(annualized_return),
         "Annualized volatility": annualized_volatility,
@@ -246,6 +294,8 @@ def performance_metrics(returns: pd.Series, annual_risk_free_rate: float = 0.03)
         "Cumulative return": total_growth - 1,
         "Historical VaR (95%)": tail_risk["Value at Risk"],
         "Historical CVaR (95%)": tail_risk["Conditional Value at Risk"],
+        "Annualized downside deviation": downside_risk["Annualized downside deviation"],
+        "Sortino ratio": downside_risk["Sortino ratio"],
     }
 
 
