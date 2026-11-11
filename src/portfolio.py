@@ -328,6 +328,69 @@ def portfolio_contributions(asset_returns: pd.DataFrame, weights: dict[str, floa
     contributions.columns.name = "Asset class"
     return contributions
 
+def portfolio_risk_contributions(
+    asset_returns: pd.DataFrame,
+    weights: dict[str, float],
+    periods_per_year: int = 12,
+) -> pd.DataFrame:
+    """Decompose annualized portfolio volatility into asset-class contributions.
+
+    Uses the Euler decomposition of portfolio standard deviation. Component
+    contributions add to total annualized volatility; negative components are
+    possible and indicate that an asset reduced risk through sample covariance.
+    """
+    validate_weights(weights)
+    if not isinstance(asset_returns, pd.DataFrame):
+        raise ValueError("Asset returns must be provided as a pandas DataFrame.")
+    if (
+        isinstance(periods_per_year, (bool, np.bool_))
+        or not isinstance(periods_per_year, (int, np.integer))
+        or periods_per_year < 1
+    ):
+        raise ValueError("Periods per year must be a positive integer.")
+
+    duplicate_assets = [
+        asset for asset in ASSET_CLASSES
+        if int((asset_returns.columns == asset).sum()) > 1
+    ]
+    if duplicate_assets:
+        raise ValueError(
+            f"Duplicate asset return columns: {', '.join(duplicate_assets)}"
+        )
+    missing = set(ASSET_CLASSES) - set(asset_returns.columns)
+    if missing:
+        raise ValueError(f"Missing asset return columns: {', '.join(sorted(missing))}")
+
+    clean = _validate_periodic_returns(asset_returns[ASSET_CLASSES])
+    if len(clean) < 2:
+        raise ValueError("At least two return observations are required for risk contributions.")
+
+    covariance = clean.cov().to_numpy(dtype=float)
+    weight_vector = np.array([float(weights[asset]) for asset in ASSET_CLASSES])
+    portfolio_variance = float(weight_vector @ covariance @ weight_vector)
+    if not np.isfinite(portfolio_variance) or portfolio_variance <= 0:
+        raise ValueError("Portfolio volatility must be positive and finite for risk contributions.")
+
+    annualization = float(np.sqrt(periods_per_year))
+    periodic_volatility = float(np.sqrt(portfolio_variance))
+    annualized_volatility = periodic_volatility * annualization
+    marginal = (covariance @ weight_vector) / periodic_volatility * annualization
+    component = weight_vector * marginal
+    share = component / annualized_volatility
+    if not np.isfinite(np.concatenate((marginal, component, share))).all():
+        raise ValueError("Risk contribution calculation exceeds the numeric range.")
+
+    return pd.DataFrame(
+        {
+            "Portfolio weight": weight_vector,
+            "Marginal contribution to annualized volatility": marginal,
+            "Component contribution to annualized volatility": component,
+            "Share of total volatility": share,
+        },
+        index=pd.Index(ASSET_CLASSES, name="Asset class"),
+    )
+
+
 def portfolio_wealth_path(returns: pd.Series, starting_value: float = 1.0) -> pd.Series:
     """Return starting capital followed by each period's compounded portfolio value.
 
