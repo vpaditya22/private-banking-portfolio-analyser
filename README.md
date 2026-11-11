@@ -13,6 +13,7 @@ A small **Python + Streamlit** portfolio-analysis application exploring how asse
 - Trailing 12-month annualized volatility and maximum drawdown to show how risk changes over time.
 - Allocation concentration analytics: Herfindahl-Hirschman index, effective number of asset classes, and largest allocation.
 - Pearson correlation heatmap for the four synthetic asset-class return series, with validation for undefined correlations.
+- Asset-level Euler risk attribution that decomposes annualized portfolio volatility using sample covariance.
 - Comparison of three example allocations against a user-defined allocation.
 - User-entered one-period stress scenarios and downloadable CSV comparison.
 - Unit tests for core calculations and input validation.
@@ -61,6 +62,7 @@ streamlit run app.py
 - **Rolling risk:** trailing 12-month sample volatility annualized by the square root of 12, plus maximum drawdown recalculated within each trailing window; the first 11 observations are blank.
 - **Allocation concentration:** sum of squared asset-class weights (Herfindahl-Hirschman index); its reciprocal is the effective number of equally weighted asset classes. This measures weight concentration only, not correlations or total portfolio risk.
 - **Asset-class correlation:** Pearson correlation across the four seeded synthetic monthly return series. The matrix describes sample co-movement only; it is not a forecast, a measure of allocation concentration, or evidence of live-market diversification.
+- **Asset-level risk contribution:** Euler decomposition of annualized portfolio volatility using the sample covariance matrix. Component contributions sum to total volatility; negative contributions can occur when an asset reduces sample portfolio variance. Results are descriptive and depend on the synthetic sample.
 - **Sharpe-style ratio:** annualized mean excess monthly return divided by monthly volatility, using the risk-free rate entered in the app.
 - **Stress test:** weighted sum of the selected asset-class shocks for one hypothetical period.
 

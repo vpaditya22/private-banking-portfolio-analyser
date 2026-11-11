@@ -26,6 +26,12 @@ The dashboard displays Pearson correlations between the four synthetic monthly a
 The matrix is calculated from the same seeded illustrative observations used elsewhere in the dashboard. It is not based on market data, does not establish causation, and should not be treated as a stable estimate of future diversification. Correlation can change across market regimes, and a low pairwise correlation does not eliminate portfolio loss or liquidity risk. The calculation rejects a series with zero variance because its correlation is undefined.
 
 
+## Asset-level risk contribution
+
+The dashboard decomposes annualized portfolio volatility with the Euler contribution formula. For asset class \(i\), its component contribution is its portfolio weight multiplied by the marginal change in portfolio volatility associated with that asset. The component contributions add to total annualized portfolio volatility.
+
+A negative component contribution is possible when an asset's sample covariance with the portfolio is negative; it indicates a diversification effect in this sample, not a guaranteed hedge. The calculation uses the same seeded synthetic monthly observations as the rest of the dashboard, assumes the selected weights are held constant, and is not a forecast or a client-specific risk attribution.
+
 ## Stress scenario
 
 The stress result is the weighted sum of user-entered asset-class shocks for one hypothetical period. It assumes the selected weights remain fixed and does not model correlations, changing prices within the period, rebalancing, fees, taxes, currency effects, liquidity, or client liabilities. It is not a forecast or a worst-case estimate.

@@ -17,6 +17,7 @@ from src.portfolio import (
     performance_metrics,
     portfolio_returns,
     portfolio_contributions,
+    portfolio_risk_contributions,
     portfolio_wealth_path,
     rolling_risk_metrics,
     synthetic_monthly_returns,
@@ -197,6 +198,38 @@ with risk_drawdown_col:
     )
     drawdown_chart.update_yaxes(tickformat=".0%")
     st.plotly_chart(drawdown_chart, use_container_width=True)
+
+
+risk_contributions = portfolio_risk_contributions(returns, weights)
+risk_contribution_df = risk_contributions.reset_index()
+
+st.subheader("Asset-level risk contribution")
+st.caption(
+    "Euler decomposition allocates annualized portfolio volatility across asset classes "
+    "using the sample covariance matrix. Component contributions add to total portfolio "
+    "volatility. A negative contribution means the asset reduced measured portfolio risk "
+    "in this synthetic sample; it is not a guaranteed hedge."
+)
+risk_chart = px.bar(
+    risk_contribution_df,
+    x="Share of total volatility",
+    y="Asset class",
+    orientation="h",
+    title="Asset-class share of annualized portfolio volatility",
+    labels={"Share of total volatility": "Share of total volatility"},
+)
+risk_chart.update_xaxes(tickformat=".0%")
+st.plotly_chart(risk_chart, use_container_width=True)
+st.dataframe(
+    risk_contribution_df.style.format({
+        "Portfolio weight": "{:.1%}",
+        "Marginal contribution to annualized volatility": "{:.2%}",
+        "Component contribution to annualized volatility": "{:.2%}",
+        "Share of total volatility": "{:.1%}",
+    }),
+    use_container_width=True,
+    hide_index=True,
+)
 
 
 st.subheader("Asset-level return contribution")

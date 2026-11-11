@@ -49,9 +49,9 @@ def test_risk_contributions_can_be_negative_for_a_diversifying_asset():
         "Cash": [0.0, 0.0, 0.0, 0.0],
     })
     weights = {
-        "Global equities": 0.50,
-        "High-quality bonds": 0.50,
-        "Gold": 0.0,
+        "Global equities": 0.60,
+        "High-quality bonds": 0.30,
+        "Gold": 0.10,
         "Cash": 0.0,
     }
 
@@ -100,9 +100,20 @@ def test_risk_contributions_reject_insufficient_observations():
 
 
 def test_risk_contributions_reject_zero_volatility_portfolio():
-    returns = pd.DataFrame({asset: [0.01, -0.01, 0.02] for asset in ASSET_CLASSES})
+    returns = pd.DataFrame({
+        "Global equities": [0.10, -0.10, 0.05],
+        "High-quality bonds": [-0.10, 0.10, -0.05],
+        "Gold": [0.0, 0.0, 0.0],
+        "Cash": [0.0, 0.0, 0.0],
+    })
+    offsetting_weights = {
+        "Global equities": 0.50,
+        "High-quality bonds": 0.50,
+        "Gold": 0.0,
+        "Cash": 0.0,
+    }
     with pytest.raises(ValueError, match="Portfolio volatility must be positive"):
-        portfolio_risk_contributions(returns, WEIGHTS)
+        portfolio_risk_contributions(returns, offsetting_weights)
 
 
 @pytest.mark.parametrize("bad_return", [float("nan"), float("inf"), -1.0])
