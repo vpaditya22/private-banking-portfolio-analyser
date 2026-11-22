@@ -34,9 +34,27 @@ def validate_weights(weights: dict[str, float], tolerance: float = 1e-6) -> None
     """Raise ValueError unless weights cover the asset classes and sum to 1."""
     if set(weights) != set(ASSET_CLASSES):
         raise ValueError(f"Weights must include exactly: {', '.join(ASSET_CLASSES)}")
-    if any((not np.isfinite(float(v))) or float(v) < 0 for v in weights.values()):
-        raise ValueError("Weights must be finite and non-negative.")
-    if abs(sum(float(v) for v in weights.values()) - 1.0) > tolerance:
+    if isinstance(tolerance, (bool, np.bool_)):
+        raise ValueError("Weight tolerance must be finite and non-negative.")
+    try:
+        tolerance_value = float(tolerance)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Weight tolerance must be finite and non-negative.") from exc
+    if not np.isfinite(tolerance_value) or tolerance_value < 0:
+        raise ValueError("Weight tolerance must be finite and non-negative.")
+
+    numeric_weights = []
+    for value in weights.values():
+        if isinstance(value, (bool, np.bool_)):
+            raise ValueError("Weights must be numeric, finite, and non-negative.")
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Weights must be numeric, finite, and non-negative.") from exc
+        if not np.isfinite(numeric_value) or numeric_value < 0:
+            raise ValueError("Weights must be numeric, finite, and non-negative.")
+        numeric_weights.append(numeric_value)
+    if abs(sum(numeric_weights) - 1.0) > tolerance_value:
         raise ValueError("Portfolio weights must sum to 100%.")
 
 
