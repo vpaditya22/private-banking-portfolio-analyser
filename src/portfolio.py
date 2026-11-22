@@ -293,7 +293,13 @@ def performance_metrics(
     clean = _validate_periodic_returns(returns)
     if len(clean) < 2:
         raise ValueError("At least two return observations are required.")
-    if not np.isfinite(float(annual_risk_free_rate)) or annual_risk_free_rate <= -1:
+    if isinstance(annual_risk_free_rate, (bool, np.bool_)):
+        raise ValueError("Annual risk-free rate must be finite and greater than -100%.")
+    try:
+        annual_risk_free_rate = float(annual_risk_free_rate)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Annual risk-free rate must be finite and greater than -100%.") from exc
+    if not np.isfinite(annual_risk_free_rate) or annual_risk_free_rate <= -1:
         raise ValueError("Annual risk-free rate must be finite and greater than -100%.")
     periods_per_year = 12
     total_growth = float((1 + clean).prod())
