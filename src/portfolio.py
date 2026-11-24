@@ -132,8 +132,12 @@ def _validate_periodic_returns(returns: pd.Series | pd.DataFrame) -> pd.Series |
 
 def synthetic_monthly_returns(months: int = 60, seed: int = 2026) -> pd.DataFrame:
     """Return deterministic illustrative monthly returns; not real market history."""
-    if months < 2:
-        raise ValueError("At least two months are required.")
+    if (
+        isinstance(months, (bool, np.bool_))
+        or not isinstance(months, (int, np.integer))
+        or months < 2
+    ):
+        raise ValueError("Months must be an integer of at least two.")
     rng = np.random.default_rng(seed)
     params = {
         "Global equities": (0.0070, 0.045),
