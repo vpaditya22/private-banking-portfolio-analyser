@@ -335,6 +335,20 @@ def test_metrics_compound_cumulative_return():
     assert metrics["Cumulative return"] == pytest.approx(0.21)
 
 
+def test_metrics_calculate_growth_in_log_space_for_large_valid_series():
+    returns = pd.Series([0.10] * 120)
+
+    metrics = performance_metrics(returns, annual_risk_free_rate=0.0)
+
+    assert metrics["Annualized return"] == pytest.approx((1.10**12) - 1)
+    assert metrics["Cumulative return"] == pytest.approx((1.10**120) - 1)
+
+
+def test_metrics_reject_growth_that_cannot_be_represented_as_float():
+    with pytest.raises(ValueError, match="exceeds the numeric range"):
+        performance_metrics(pd.Series([1e308, 1e308]))
+
+
 def test_portfolio_contributions_sum_to_portfolio_returns():
     df = pd.DataFrame({
         "Global equities": [0.10, -0.02],

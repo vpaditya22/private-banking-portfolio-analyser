@@ -314,8 +314,12 @@ def performance_metrics(
     if not np.isfinite(annual_risk_free_rate) or annual_risk_free_rate <= -1:
         raise ValueError("Annual risk-free rate must be finite and greater than -100%.")
     periods_per_year = 12
-    total_growth = float((1 + clean).prod())
-    annualized_return = total_growth ** (periods_per_year / len(clean)) - 1
+    log_growth = float(np.log1p(clean.to_numpy(dtype=float)).sum())
+    annualized_log_growth = log_growth * (periods_per_year / len(clean))
+    max_log = float(np.log(np.finfo(float).max))
+    if log_growth > max_log or annualized_log_growth > max_log:
+        raise ValueError("Annualized return calculation exceeds the numeric range.")
+    annualized_return = float(np.expm1(annualized_log_growth))
     annualized_volatility = float(clean.std(ddof=1) * np.sqrt(periods_per_year))
     monthly_rf = (1 + annual_risk_free_rate) ** (1 / periods_per_year) - 1
     excess = clean - monthly_rf
@@ -327,7 +331,7 @@ def performance_metrics(
         "Annualized volatility": annualized_volatility,
         "Maximum drawdown": max_drawdown(clean),
         "Sharpe-style ratio": sharpe,
-        "Cumulative return": total_growth - 1,
+        "Cumulative return": float(np.expm1(log_growth)),
         "Historical VaR (95%)": tail_risk["Value at Risk"],
         "Historical CVaR (95%)": tail_risk["Conditional Value at Risk"],
         "Annualized downside deviation": downside_risk["Annualized downside deviation"],
