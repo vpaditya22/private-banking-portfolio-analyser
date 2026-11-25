@@ -349,6 +349,19 @@ def test_metrics_reject_growth_that_cannot_be_represented_as_float():
         performance_metrics(pd.Series([1e308, 1e308]))
 
 
+def test_allocation_summary_passes_annual_target_to_sortino_metrics():
+    from src.portfolio import allocation_summary
+
+    returns = pd.DataFrame({asset: [-0.02, 0.01, 0.03, -0.01] for asset in ASSET_CLASSES})
+    result = allocation_summary(VALID, returns, annual_target_return=0.12)
+    expected = performance_metrics(portfolio_returns(returns, VALID), annual_target_return=0.12)
+
+    assert result["Annualized downside deviation"] == pytest.approx(
+        expected["Annualized downside deviation"]
+    )
+    assert result["Sortino ratio"] == pytest.approx(expected["Sortino ratio"])
+
+
 def test_portfolio_contributions_sum_to_portfolio_returns():
     df = pd.DataFrame({
         "Global equities": [0.10, -0.02],
