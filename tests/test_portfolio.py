@@ -290,6 +290,15 @@ def test_stress_shock_rejects_loss_below_100_percent():
         apply_one_period_shock(VALID, shocks)
 
 
+@pytest.mark.parametrize("bad_shock", [True, False, "not-a-return", None])
+def test_stress_shock_rejects_non_numeric_or_boolean_values(bad_shock):
+    shocks = {a: 0.0 for a in ASSET_CLASSES}
+    shocks["Gold"] = bad_shock
+
+    with pytest.raises(ValueError, match="Shock returns"):
+        apply_one_period_shock(VALID, shocks)
+
+
 def test_metrics_return_expected_keys():
     metrics = performance_metrics(pd.Series([0.01, -0.02, 0.015, 0.0]))
     assert {

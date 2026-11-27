@@ -346,9 +346,21 @@ def apply_one_period_shock(weights: dict[str, float], shocks: dict[str, float]) 
     validate_weights(weights)
     if set(shocks) != set(ASSET_CLASSES):
         raise ValueError(f"Shocks must include exactly: {', '.join(ASSET_CLASSES)}")
-    if any(not np.isfinite(float(v)) or float(v) < -1 for v in shocks.values()):
-        raise ValueError("Shock returns must be finite and cannot be below -100%.")
-    return float(sum(float(weights[a]) * float(shocks[a]) for a in ASSET_CLASSES))
+    numeric_shocks = {}
+    for asset in ASSET_CLASSES:
+        value = shocks[asset]
+        if isinstance(value, (bool, np.bool_)):
+            raise ValueError("Shock returns must be numeric, finite, and cannot be below -100%.")
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "Shock returns must be numeric, finite, and cannot be below -100%."
+            ) from exc
+        if not np.isfinite(numeric_value) or numeric_value < -1:
+            raise ValueError("Shock returns must be numeric, finite, and cannot be below -100%.")
+        numeric_shocks[asset] = numeric_value
+    return float(sum(float(weights[a]) * numeric_shocks[a] for a in ASSET_CLASSES))
 
 
 def allocation_summary(
