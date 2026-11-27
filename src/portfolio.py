@@ -269,6 +269,8 @@ def downside_risk_metrics(
     if clean.empty:
         raise ValueError("At least one return observation is required.")
 
+    if isinstance(annual_target_return, (bool, np.bool_)):
+        raise ValueError("Annual target return must be finite and greater than -100%.")
     try:
         target = float(annual_target_return)
     except (TypeError, ValueError) as exc:

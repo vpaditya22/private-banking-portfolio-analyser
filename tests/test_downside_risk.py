@@ -40,7 +40,7 @@ def test_downside_risk_metrics_rejects_empty_returns():
         downside_risk_metrics(pd.Series(dtype=float))
 
 
-@pytest.mark.parametrize("target", [-1.0, -1.1, float("nan"), float("inf"), float("-inf"), "not-a-rate"])
+@pytest.mark.parametrize("target", [-1.0, -1.1, float("nan"), float("inf"), float("-inf"), "not-a-rate", True, False])
 def test_downside_risk_metrics_rejects_invalid_annual_target(target):
     with pytest.raises(ValueError, match="Annual target return"):
         downside_risk_metrics(pd.Series([-0.02, 0.01]), annual_target_return=target)
