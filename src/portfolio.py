@@ -121,7 +121,12 @@ def asset_return_correlation_matrix(asset_returns: pd.DataFrame) -> pd.DataFrame
 
 def _validate_periodic_returns(returns: pd.Series | pd.DataFrame) -> pd.Series | pd.DataFrame:
     """Reject invalid simple returns before they can distort portfolio metrics."""
-    numeric = returns.astype(float)
+    if not isinstance(returns, (pd.Series, pd.DataFrame)):
+        raise ValueError("Periodic returns must be provided as a pandas Series or DataFrame.")
+    try:
+        numeric = returns.astype(float)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Periodic returns must be numeric.") from exc
     values = numeric.to_numpy(dtype=float)
     if not np.isfinite(values).all():
         raise ValueError("Periodic returns must be finite; resolve missing or infinite observations first.")

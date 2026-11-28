@@ -185,6 +185,12 @@ def test_max_drawdown_negative_after_loss():
     assert max_drawdown(returns) < 0
 
 
+@pytest.mark.parametrize("returns", [[0.01, 0.02], pd.Series(["not-a-return"])])
+def test_return_metrics_reject_unsupported_or_non_numeric_inputs(returns):
+    with pytest.raises(ValueError, match="Periodic returns"):
+        max_drawdown(returns)
+
+
 @pytest.mark.parametrize(
     ("periodic_returns", "expected"),
     [
