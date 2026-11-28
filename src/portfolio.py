@@ -154,6 +154,8 @@ def synthetic_monthly_returns(months: int = 60, seed: int = 2026) -> pd.DataFram
 
 def portfolio_returns(asset_returns: pd.DataFrame, weights: dict[str, float]) -> pd.Series:
     validate_weights(weights)
+    if not isinstance(asset_returns, pd.DataFrame):
+        raise ValueError("Asset returns must be provided as a pandas DataFrame.")
     duplicate_assets = [
         asset for asset in ASSET_CLASSES
         if int((asset_returns.columns == asset).sum()) > 1
@@ -382,6 +384,8 @@ def portfolio_contributions(asset_returns: pd.DataFrame, weights: dict[str, floa
     are decimal returns (for example, 0.01 means one percentage point).
     """
     validate_weights(weights)
+    if not isinstance(asset_returns, pd.DataFrame):
+        raise ValueError("Asset returns must be provided as a pandas DataFrame.")
     duplicate_assets = [
         asset for asset in ASSET_CLASSES
         if int((asset_returns.columns == asset).sum()) > 1

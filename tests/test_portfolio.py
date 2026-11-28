@@ -174,6 +174,12 @@ def test_missing_asset_return_column_rejected():
         portfolio_returns(df, VALID)
 
 
+@pytest.mark.parametrize("calculate", [portfolio_returns, portfolio_contributions])
+def test_portfolio_calculations_require_dataframe_asset_returns(calculate):
+    with pytest.raises(ValueError, match="pandas DataFrame"):
+        calculate([[0.01, 0.02]], VALID)
+
+
 def test_max_drawdown_negative_after_loss():
     returns = pd.Series([0.10, -0.20, 0.05])
     assert max_drawdown(returns) < 0
