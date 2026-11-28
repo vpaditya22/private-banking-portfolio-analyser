@@ -1,0 +1,158 @@
+name: Daily Codex maintenance
+
+on:
+  schedule:
+    - cron: "30 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: daily-codex-maintenance-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  maintain:
+    # Keep this false until the existing ChatGPT automation no longer writes to this repository.
+    if: ${{ vars.AUTONOMOUS_CODING_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out main without exposing the push token to Codex
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install project dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements.txt
+
+      - name: Require the Codex API secret
+        shell: bash
+        env:
+          CODEX_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [[ -z "$CODEX_KEY" ]]; then
+            echo "::error::Add the OPENAI_API_KEY Actions secret before enabling autonomous coding."
+            exit 1
+          fi
+
+      - name: Codex improvement 1
+        id: codex_1
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          permission-profile: ":workspace"
+          prompt: |
+            Inspect this repository's source, documentation, recent commits, and tests.
+            Make exactly one substantive, evidence-based improvement to application behavior,
+            correctness, privacy, accessibility, or data integrity. Add or update regression
+            tests. Do not invent requirements, make cosmetic-only changes, weaken tests, or
+            create placeholder work. Do not commit. The workflow will run the existing tests
+            and compile check before committing. If you cannot justify a real improvement,
+            leave the worktree unchanged and make your entire final response exactly
+            NO_CHANGE. If you made a change, make the first line of your final response a
+            concise commit subject (72 characters maximum) that accurately describes it.
+
+      - name: Test improvement 1
+        run: |
+          python -m pytest -q
+          python -m compileall -q app.py src tests
+
+      - name: Commit and push improvement 1
+        shell: bash
+        env:
+          SUMMARY: ${{ steps.codex_1.outputs.final-message }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git add -A
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            if [[ "$SUMMARY" == "NO_CHANGE" ]]; then
+              echo "Codex found no justified change; no commit created."
+              exit 0
+            fi
+            echo "::error::Codex made no changes and did not report NO_CHANGE."
+            exit 1
+          fi
+          message="$(printf '%s\n' "$SUMMARY" | head -n 1 | cut -c1-72)"
+          if [[ -z "$message" || "$message" == "NO_CHANGE" ]]; then
+            echo "::error::A real change needs an accurate commit subject."
+            exit 1
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "$message"
+          trap 'git config --global --unset-all http.https://github.com/.extraheader >/dev/null 2>&1 || true' EXIT
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w 0)"
+          git config --global http.https://github.com/.extraheader "AUTHORIZATION: basic $auth"
+          git push origin HEAD:main
+
+      - name: Codex improvement 2
+        id: codex_2
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          permission-profile: ":workspace"
+          prompt: |
+            Review the current worktree and today's commits, then inspect the repository's
+            source, documentation, and tests. Make one additional substantive, evidence-based
+            improvement that is distinct from today's earlier commit. Add or update regression
+            tests. Do not invent requirements, make cosmetic-only changes, weaken tests, or
+            create placeholder work. Do not commit. The workflow will test and commit changes.
+            If no justified distinct improvement is available, leave the worktree unchanged
+            and make your entire final response exactly NO_CHANGE. If you made a change, make
+            the first line of your final response a concise accurate commit subject
+            (72 characters maximum).
+
+      - name: Test improvement 2
+        run: |
+          python -m pytest -q
+          python -m compileall -q app.py src tests
+
+      - name: Commit and push improvement 2
+        shell: bash
+        env:
+          SUMMARY: ${{ steps.codex_2.outputs.final-message }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git add -A
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            if [[ "$SUMMARY" == "NO_CHANGE" ]]; then
+              echo "Codex found no justified change; no commit created."
+              exit 0
+            fi
+            echo "::error::Codex made no changes and did not report NO_CHANGE."
+            exit 1
+          fi
+          message="$(printf '%s\n' "$SUMMARY" | head -n 1 | cut -c1-72)"
+          if [[ -z "$message" || "$message" == "NO_CHANGE" ]]; then
+            echo "::error::A real change needs an accurate commit subject."
+            exit 1
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "$message"
+          trap 'git config --global --unset-all http.https://github.com/.extraheader >/dev/null 2>&1 || true' EXIT
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w 0)"
+          git config --global http.https://github.com/.extraheader "AUTHORIZATION: basic $auth"
+          git push origin HEAD:main
+
+      - name: Notify on failure
+        if: failure()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Daily Codex maintenance failed (run $GITHUB_RUN_ID)" \
+            --body "Daily Codex maintenance failed for $GITHUB_REPOSITORY. @vpaditya22 Please review the Actions logs: $RUN_URL"
