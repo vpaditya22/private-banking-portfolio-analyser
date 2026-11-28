@@ -15,8 +15,8 @@ concurrency:
 
 jobs:
   maintain:
-    # Keep this false until the existing ChatGPT automation no longer writes to this repository.
-    if: ${{ vars.AUTONOMOUS_CODING_ENABLED == 'true' }}
+    # Explicitly arm only after the existing ChatGPT automation no longer writes to this repository.
+    if: ${{ vars.CODEX_DAILY_MAINTENANCE_ARMED == 'I_HAVE_STOPPED_OTHER_WRITERS' }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
